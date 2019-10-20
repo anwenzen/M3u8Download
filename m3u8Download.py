@@ -3,6 +3,7 @@
 import os
 import threading
 import requests
+import re
 
 
 # 下载.m3u8
@@ -19,10 +20,11 @@ def Get(DIR, NAME, URL, TsURL=""):
         if "#" in line:
             NewFile.writelines(line)
             continue
-        NewFile.writelines(line.rsplit("/", 1)[-1])
+        result = re.search(r"(.*)\.ts",line).group().rsplit("/")[-1]
+        NewFile.writelines(result + "\n")
         TS = (line.rsplit("\n", 1)[0]).rsplit("/", 1)[-1]
-        perfect_TS = TsURL + TS
-        TS_LIST.append(perfect_TS)
+        TS = TsURL + TS
+        TS_LIST.append(TS)
     res.close()
     return TS_LIST
 
@@ -32,7 +34,8 @@ def REQUEST(LIST, DIR, ErrorFile="/ErrorList01.txt"):
         if not os.path.exists("./" + DIR + "/" + (LIST.split("\n")[0]).rsplit("/", 1)[-1]):
             res = requests.get(LIST, stream=True)
             if res.status_code == 200:
-                with open("./" + DIR + "/" + (LIST.split("\n")[0]).rsplit("/", 1)[-1], "wb") as ts:
+                result = re.search(r"(http|https)(.*)\.ts",LIST).group().rsplit("/")[-1]
+                with open("./" + DIR + "/" + result, "wb") as ts:
                     for chunk in res.iter_content(chunk_size=1024):
                         if chunk:
                             ts.write(chunk)
@@ -88,9 +91,9 @@ def Start(URL, NAME, TsURL=""):
 
 if __name__ == "__main__":
     # 完整的m3u8文件链接  如："https://www.bilibili.com/ACHED/A0001.m3u8"
-    m3u8URL = ""
+    m3u8URL = "https://zy.kubozy-sohu-360-sogou.com/20191012/12689_d9d140b4/1000k/hls/index.m3u8"
     # .ts链接的所有前缀  如： "https://www.bilibili.com/ACHED/A0001.ts" 的 "https://www.bilibili.com/ACHED/"
-    tsURL = ""
+    tsURL = "https://zy.kubozy-sohu-360-sogou.com/20191012/12689_d9d140b4/1000k/hls/"
     # 保存m3u8的文件名  如："index.m3u8"
-    m3u8NAME = ""
+    m3u8NAME = "哪吒.m3u8"
     Start(m3u8URL, m3u8NAME, tsURL)
