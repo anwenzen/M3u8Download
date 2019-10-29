@@ -98,7 +98,7 @@ def Start(URL, NAME, SUM=""):
 
 if __name__ == "__main__":
     # 完整的m3u8文件链接  如："https://www.bilibili.com/ACHED/A0001.m3u8"
-    m3u8URL = "https://api.nmbaojie.com/api/data/lem3u8/31641683.m3u8"
+    m3u8URL = ""
     # 保存m3u8的文件名  如："index.m3u8"
-    m3u8NAME = "index.m3u8"
+    m3u8NAME = ""
     Start(m3u8URL, m3u8NAME)
