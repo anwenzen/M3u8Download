@@ -20,27 +20,34 @@ def Get(DIR, NAME, URL, TsURL=""):
     NewFile = open("./" + DIR + "/playlist.m3u8", 'w')
     for line in open("./" + DIR + "/" + NAME, 'r'):
         if "#" in line:
+            if "EXT-X-KEY" in line:
+                NewFile.writelines(Download_KEY(URL, DIR, line))
+                continue
             NewFile.writelines(line)
             continue
-        if re.search(r'^http', line) != None:
-            NewFile.writelines(str(SUM) + ".ts\n")
+        elif re.search(r'^http', line) != None:
+            NewFile.writelines("w_" + str(SUM) + ".ts\n")
             SUM += 1
             TS_LIST.append(line)
             continue
-        if re.search(r'^/', line) != None:
-            NewFile.writelines(str(SUM) + ".ts\n")
+        elif re.search(r'^/', line) != None:
+            NewFile.writelines("w_" + str(SUM) + ".ts\n")
             SUM += 1
             frontURL = re.search(r'https?://.*?/', URL)
             TS_LIST.append(frontURL.group() + line.split('/',1)[-1])
             continue
-        NewFile.writelines(str(SUM) + ".ts\n")
-        SUM += 1
-        frontURL = URL.rsplit("/",1)[0]
-        TS_LIST.append(frontURL + line)
+        else:
+            NewFile.writelines("w_" + str(SUM) + ".ts\n")
+            SUM += 1
+            frontURL = URL.rsplit("/",1)[0]
+            TS_LIST.append(frontURL + line)
+            continue
+        print("如果你看见这个，说明没有正确找到 .ts 的URL")
     return TS_LIST
 
 
 def REQUEST(URL, DIR, Name):
+    URL = URL.split('\n')[0]
     try:
         if not os.path.exists("./" + DIR + "/" + Name):
             res = requests.get(URL, stream=True)
@@ -59,8 +66,27 @@ def REQUEST(URL, DIR, Name):
 # 下载.ts
 def Download(TS_LIST, DIR, I):
     for LIST in TS_LIST:
-        REQUEST(LIST, DIR, str(I) + ".ts")
+        REQUEST(LIST, DIR, "w_" + str(I) + ".ts")
         I += 1
+
+
+def Download_KEY(URL, DIR, LINE):
+    str1 = r"URI=[\'|\"].*?[\'|\"]"
+    key = re.search(str1, LINE).group()[5:-1]
+
+    if re.search(r'^http', key) != None:
+        key_URL = key
+    elif re.search(r'^/', key) != None:
+        key_URL = re.search(r'https?://.*?/', URL).group() + key.split('/', 1)[-1]
+    else:
+        key_URL = URL.rsplit("/",1)[0] + key
+    res = requests.get(key_URL)
+    with open("./" + DIR + "/key.key", 'wb') as f:
+        f.write(res.content) 
+    res.close()
+
+    new_result = LINE[0:re.search(str1, LINE).start()] + 'URI="key.key"' + LINE[re.search(str1, LINE).end():]
+    return new_result
 
 
 class myThread(threading.Thread):  # 继承父类threading.Thread
@@ -98,7 +124,7 @@ def Start(URL, NAME, SUM=""):
 
 if __name__ == "__main__":
     # 完整的m3u8文件链接  如："https://www.bilibili.com/ACHED/A0001.m3u8"
-    m3u8URL = "https://api.nmbaojie.com/api/data/lem3u8/31641683.m3u8"
+    m3u8URL = ""
     # 保存m3u8的文件名  如："index.m3u8"
-    m3u8NAME = "index.m3u8"
+    m3u8NAME = ""
     Start(m3u8URL, m3u8NAME)
