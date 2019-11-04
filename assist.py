@@ -16,5 +16,5 @@ def FFMPEG(DIR):
 
 if __name__ == "__main__":
     # 文件夹
-    Folder = "index"
+    Folder = ""
     FFMPEG(Folder)
