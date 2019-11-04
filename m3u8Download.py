@@ -4,6 +4,10 @@ import os
 import threading
 import requests
 import re
+import time
+
+
+Global_SUM = []
 
 
 # 下载.m3u8
@@ -17,7 +21,7 @@ def Get(DIR, NAME, URL, TsURL=""):
     res.close()
     TS_LIST = []
     SUM = 0
-    NewFile = open("./" + DIR + "/playlist.m3u8", 'w')
+    NewFile = open("./" + DIR + "/new_" + DIR + ".m3u8", 'w')
     for line in open("./" + DIR + "/" + NAME, 'r'):
         if "#" in line:
             if "EXT-X-KEY" in line:
@@ -63,13 +67,14 @@ def REQUEST(URL, DIR, Name):
         print("下载" + URL + "失败", end='\n')
 
 
-# 下载.ts
+# 下载 .ts 文件
 def Download(TS_LIST, DIR, I):
     for LIST in TS_LIST:
         REQUEST(LIST, DIR, "w_" + str(I) + ".ts")
         I += 1
 
 
+# 下载 .key 文件
 def Download_KEY(URL, DIR, LINE):
     str1 = r"URI=[\'|\"].*?[\'|\"]"
     key = re.search(str1, LINE).group()[5:-1]
@@ -89,9 +94,18 @@ def Download_KEY(URL, DIR, LINE):
     return new_result
 
 
+# 合并视频
+def FFMPEG(DIR):
+    Input = "./" + DIR + "/new_" + DIR + ".m3u8"
+    Output = "./" + DIR + "/new_" + DIR + ".mp4"
+    CMD = "ffmpeg -allowed_extensions ALL -i " + Input + " -acodec copy -vcodec copy -f mp4 " + Output
+    os.system(CMD)
+
+
 class myThread(threading.Thread):  # 继承父类threading.Thread
     def __init__(self, Id, List, dir0, I):
         threading.Thread.__init__(self)
+        global Global_SUM
         self.ID = Id
         self.List = List
         self.dir = dir0
@@ -101,9 +115,10 @@ class myThread(threading.Thread):  # 继承父类threading.Thread
         print("线程：" + str(self.ID) + "开始", end="\n")
         Download(self.List, self.dir, self.i)
         print("线程：" + str(self.ID) + "结束", end="\n")
+        Global_SUM.append(self.i)
 
 
-def Start(URL, NAME, SUM=""):
+def Start(URL, NAME, SUM=[]):
     DIR = NAME.split(".")[0]
     TS_LIST = Get(DIR, NAME, URL)
     length = len(TS_LIST)
@@ -117,9 +132,20 @@ def Start(URL, NAME, SUM=""):
         myThread(ID, TS_LIST[i: i + L], DIR, i).start()
         ID += 1
         i += L
+        SUM.append(i)
         if i < length <= i + L:
             myThread(ID, TS_LIST[i:], DIR, i).start()
+            SUM.append(i)
             break
+
+    while True:
+        if len(SUM) == len(Global_SUM):
+            FFMPEG(DIR)
+            print("合并完成")
+            break
+        
+        time.sleep(5)
+        
 
 
 if __name__ == "__main__":
