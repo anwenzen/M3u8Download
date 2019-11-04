@@ -6,7 +6,7 @@
 
 ## 依赖
 
-1. requests库 pip install requests
+1. 'requests' 库,使用'pip install requests'安装即可
 2. [ffmpeg](http://www.ffmpeg.org)
 
 ## 使用
