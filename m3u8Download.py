@@ -10,7 +10,7 @@ import time
 Global_SUM = []
 
 
-# 下载.m3u8
+# 下载.m3u8   获取 .ts链接以及.key链接 
 def Get(DIR, NAME, URL, TsURL=""):
     if not os.path.exists("./" + DIR):
         os.mkdir("./" + DIR)
@@ -44,12 +44,13 @@ def Get(DIR, NAME, URL, TsURL=""):
             NewFile.writelines("w_" + str(SUM) + ".ts\n")
             SUM += 1
             frontURL = URL.rsplit("/",1)[0]
-            TS_LIST.append(frontURL + line)
+            TS_LIST.append(frontURL + '/' + line)
             continue
         print("如果你看见这个，说明没有正确找到 .ts 的URL")
     return TS_LIST
 
 
+# 下载 .ts 文件
 def REQUEST(URL, DIR, Name):
     URL = URL.split('\n')[0]
     try:
@@ -84,7 +85,7 @@ def Download_KEY(URL, DIR, LINE):
     elif re.search(r'^/', key) != None:
         key_URL = re.search(r'https?://.*?/', URL).group() + key.split('/', 1)[-1]
     else:
-        key_URL = URL.rsplit("/",1)[0] + key
+        key_URL = URL.rsplit("/",1)[0] + '/' + key
     res = requests.get(key_URL)
     with open("./" + DIR + "/key.key", 'wb') as f:
         f.write(res.content) 
