@@ -1,28 +1,23 @@
 # -*- coding: UTF-8 -*-
 
+from concurrent.futures import ThreadPoolExecutor
 import os
-import threading
 import requests
 import re
-import time
-
-
-Global_SUM = []
-
 
 # 下载.m3u8   获取 .ts链接以及.key链接 
-def Get(DIR, NAME, URL, TsURL=""):
+def Get(DIR, URL, TsURL=""):
     if not os.path.exists("./" + DIR):
         os.mkdir("./" + DIR)
 
     res = requests.get(URL)
-    with open("./" + DIR + "/" + NAME, 'wb') as f:
+    with open("./" + DIR + "/" + DIR, 'wb') as f:
         f.write(res.content)
     res.close()
     TS_LIST = []
     SUM = 0
     NewFile = open("./" + DIR + "/new_" + DIR + ".m3u8", 'w')
-    for line in open("./" + DIR + "/" + NAME, 'r'):
+    for line in open("./" + DIR + "/" + DIR, 'r'):
         if "#" in line:
             if "EXT-X-KEY" in line:
                 NewFile.writelines(Download_KEY(URL, DIR, line))
@@ -51,28 +46,23 @@ def Get(DIR, NAME, URL, TsURL=""):
 
 
 # 下载 .ts 文件
-def REQUEST(URL, DIR, Name):
+def Download(URL, DIR, Name):
     URL = URL.split('\n')[0]
     try:
         if not os.path.exists("./" + DIR + "/" + Name):
+            print("下载\t./" + DIR + "/" + Name + "\t开始")
             res = requests.get(URL, stream=True)
             if res.status_code == 200:
                 with open("./" + DIR + "/" + Name, "wb") as ts:
                     for chunk in res.iter_content(chunk_size=1024):
                         if chunk:
                             ts.write(chunk)
+                print("下载\t./" + DIR + "/" + Name + "\t完成")
             else:
-                print("下载" + URL + "失败", end='\n')
+                print("下载 " + URL + " 失败")
             res.close()
     except ConnectionError:
-        print("下载" + URL + "失败", end='\n')
-
-
-# 下载 .ts 文件
-def Download(TS_LIST, DIR, I):
-    for LIST in TS_LIST:
-        REQUEST(LIST, DIR, "w_" + str(I) + ".ts")
-        I += 1
+        print("下载 " + URL + " 失败")
 
 
 # 下载 .key 文件
@@ -95,7 +85,7 @@ def Download_KEY(URL, DIR, LINE):
     return new_result
 
 
-# 合并视频
+# 合并视频，需要ffmpeg
 def FFMPEG(DIR):
     Input = "./" + DIR + "/new_" + DIR + ".m3u8"
     Output = "./" + DIR + "/new_" + DIR + ".mp4"
@@ -103,55 +93,24 @@ def FFMPEG(DIR):
     os.system(CMD)
 
 
-class myThread(threading.Thread):  # 继承父类threading.Thread
-    def __init__(self, Id, List, dir0, I):
-        threading.Thread.__init__(self)
-        global Global_SUM
-        self.ID = Id
-        self.List = List
-        self.dir = dir0
-        self.i = I
-
-    def run(self):  # 把要执行的代码写到run函数里面 线程在创建后会直接运行run函数
-        print("线程：" + str(self.ID) + "开始", end="\n")
-        Download(self.List, self.dir, self.i)
-        print("线程：" + str(self.ID) + "结束", end="\n")
-        Global_SUM.append(self.i)
-
-
-def Start(URL, NAME, SUM=[]):
-    DIR = NAME.split(".")[0]
-    TS_LIST = Get(DIR, NAME, URL)
-    length = len(TS_LIST)
-
-    # 线程数（实际线程数 >= Threads）
-    # 不要盲目加大，过大会造成服务器没反应，或者被黑
-    Threads = 16
-    L = int((length - (length % Threads)) / Threads)
-    i, ID = 0, 1
-    while True:
-        myThread(ID, TS_LIST[i: i + L], DIR, i).start()
-        ID += 1
-        i += L
-        SUM.append(i)
-        if i < length <= i + L:
-            myThread(ID, TS_LIST[i:], DIR, i).start()
-            SUM.append(i)
-            break
-
-    while True:
-        if len(SUM) == len(Global_SUM):
-            FFMPEG(DIR)
-            print("合并完成")
-            break
-        
-        time.sleep(5)
-        
+def Start(URL, DIR, THREAD):
+    TS_LIST = Get(DIR, URL)
+    
+    ID = 0
+    with ThreadPoolExecutor(THREAD) as threadpool:
+        for TS in TS_LIST:
+            threadpool.submit(Download, TS, DIR, "w_"+str(ID)+".ts")
+            ID += 1
+        threadpool.shutdown(wait=False)
+    FFMPEG(DIR)
+    print("合并完成")
 
 
 if __name__ == "__main__":
-    # 完整的m3u8文件链接  如："https://www.bilibili.com/ACHED/A0001.m3u8"
-    m3u8URL = ""
-    # 保存m3u8的文件名  如："index.m3u8"
-    m3u8NAME = ""
-    Start(m3u8URL, m3u8NAME)
+    # 完整的m3u8文件链接  如："https://www.bilibili.com/example/index.m3u8"
+    URL = "https://www.bilibili.com/example/index.m3u8"
+    # 保存m3u8的文件名夹  如："index"
+    DIR = "index"
+    # 线程数，网速跟不上再大也没用。不要盲目加大
+    THR = 64
+    Start(URL, DIR, THR)
