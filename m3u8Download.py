@@ -41,7 +41,6 @@ def Get(DIR, URL, TsURL=""):
             frontURL = URL.rsplit("/",1)[0]
             TS_LIST.append(frontURL + '/' + line)
             continue
-        print("如果你看见这个，说明没有正确找到 .ts 的URL")
     return TS_LIST
 
 
@@ -76,11 +75,13 @@ def Download_KEY(URL, DIR, LINE):
         key_URL = re.search(r'https?://.*?/', URL).group() + key.split('/', 1)[-1]
     else:
         key_URL = URL.rsplit("/",1)[0] + '/' + key
-    res = requests.get(key_URL)
-    with open("./" + DIR + "/key.key", 'wb') as f:
-        f.write(res.content) 
-    res.close()
-
+    try:
+        res = requests.get(key_URL)
+        with open("./" + DIR + "/key.key", 'wb') as f:
+            f.write(res.content) 
+        res.close()
+    except:
+        print("如果你看见这个，证明 .key文件 没有下载成功，请手动下载并改名为 key.key")
     new_result = LINE[0:re.search(str1, LINE).start()] + 'URI="key.key"' + LINE[re.search(str1, LINE).end():]
     return new_result
 
@@ -101,16 +102,16 @@ def Start(URL, DIR, THREAD):
         for TS in TS_LIST:
             threadpool.submit(Download, TS, DIR, "w_"+str(ID)+".ts")
             ID += 1
-        threadpool.shutdown(wait=False)
+        threadpool.shutdown(wait=True)
     FFMPEG(DIR)
     print("合并完成")
 
 
 if __name__ == "__main__":
-    # 完整的m3u8文件链接  如："https://www.bilibili.com/example/index.m3u8"
-    URL = "https://www.bilibili.com/example/index.m3u8"
-    # 保存m3u8的文件名夹  如："index"
-    DIR = "index"
+    # 完整的m3u8文件链接  如：URL = "https://www.bilibili.com/example/index.m3u8"
+    URL = input("输入URL：")
+    # 保存m3u8的文件名夹  如：DIR = "index"
+    DIR = input("输入文件夹名：")
     # 线程数，网速跟不上再大也没用。不要盲目加大
     THR = 64
     Start(URL, DIR, THR)
