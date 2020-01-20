@@ -4,20 +4,26 @@ from concurrent.futures import ThreadPoolExecutor
 import os
 import requests
 import re
+import shutil
 
-# 下载.m3u8   获取 .ts链接以及.key链接 
+sum_Front = 0   #记录下载成功的 .ts 文件个数
+sum_Next = 0    #记录一个 .m3u8 文件含有 .ts 文件的个数
+
+
+# 下载.m3u8   获取 .ts链接以及 .key链接
 def Get(DIR, URL, TsURL=""):
-    if not os.path.exists("./" + DIR):
-        os.mkdir("./" + DIR)
+    global sum_Next
+    if not os.path.exists(f"./{DIR}"):
+        os.mkdir(f"./{DIR}")
+        os.mkdir(f"./{DIR}/ts")
 
     res = requests.get(URL)
-    with open("./" + DIR + "/" + DIR, 'wb') as f:
+    with open(f"./{DIR}/ts/{DIR}.m3u8", 'wb') as f:
         f.write(res.content)
     res.close()
     TS_LIST = []
-    SUM = 0
-    NewFile = open("./" + DIR + "/new_" + DIR + ".m3u8", 'w')
-    for line in open("./" + DIR + "/" + DIR, 'r'):
+    NewFile = open(f"./{DIR}/new_{DIR}.m3u8", 'w')
+    for line in open(f"./{DIR}/ts/{DIR}.m3u8", 'r'):
         if "#" in line:
             if "EXT-X-KEY" in line:
                 NewFile.writelines(Download_KEY(URL, DIR, line))
@@ -25,20 +31,20 @@ def Get(DIR, URL, TsURL=""):
             NewFile.writelines(line)
             continue
         elif re.search(r'^http', line) != None:
-            NewFile.writelines("w_" + str(SUM) + ".ts\n")
-            SUM += 1
+            sum_Next += 1
+            NewFile.writelines(f"./ts/w_{sum_Next}.ts\n")
             TS_LIST.append(line)
             continue
         elif re.search(r'^/', line) != None:
-            NewFile.writelines("w_" + str(SUM) + ".ts\n")
-            SUM += 1
+            sum_Next += 1
+            NewFile.writelines(f"./ts/w_{sum_Next}.ts\n")
             frontURL = re.search(r'https?://.*?/', URL)
-            TS_LIST.append(frontURL.group() + line.split('/',1)[-1])
+            TS_LIST.append(frontURL.group() + line.split('/', 1)[-1])
             continue
         else:
-            NewFile.writelines("w_" + str(SUM) + ".ts\n")
-            SUM += 1
-            frontURL = URL.rsplit("/",1)[0]
+            sum_Next += 1
+            NewFile.writelines(f"./ts/w_{sum_Next}.ts\n")
+            frontURL = URL.rsplit("/", 1)[0]
             TS_LIST.append(frontURL + '/' + line)
             continue
     return TS_LIST
@@ -46,22 +52,26 @@ def Get(DIR, URL, TsURL=""):
 
 # 下载 .ts 文件
 def Download(URL, DIR, Name):
+    global sum_Front, sum_Next
     URL = URL.split('\n')[0]
     try:
-        if not os.path.exists("./" + DIR + "/" + Name):
-            print("下载\t./" + DIR + "/" + Name + "\t开始")
-            res = requests.get(URL, stream=True)
+        if not os.path.exists(f"./{DIR}/ts/{Name}"):
+            res = requests.get(URL, stream=True, timeout=(5, 60))       # ConnectTimeout= 5 s     ReadTimeout= 60 s
             if res.status_code == 200:
-                with open("./" + DIR + "/" + Name, "wb") as ts:
+                with open(f"./{DIR}/ts/{Name}", "wb") as ts:
                     for chunk in res.iter_content(chunk_size=1024):
                         if chunk:
                             ts.write(chunk)
-                print("下载\t./" + DIR + "/" + Name + "\t完成")
+                sum_Front += 1
+                print(f"\r下载进度：\t{sum_Front}/{sum_Next}", end="")
             else:
-                print("下载 " + URL + " 失败")
+                print(f"下载./{DIR}/ts/{Name}失败, [服务器响应码status_code!=200]")
             res.close()
-    except ConnectionError:
-        print("下载 " + URL + " 失败")
+
+    except Exception:
+        if os.path.exists(f"./{DIR}/ts/{Name}"):
+            os.remove(f"./{DIR}/ts/{Name}")
+        print(f"下载./{DIR}/ts/{Name}失败,连接或下载超时")
 
 
 # 下载 .key 文件
@@ -74,37 +84,45 @@ def Download_KEY(URL, DIR, LINE):
     elif re.search(r'^/', key) != None:
         key_URL = re.search(r'https?://.*?/', URL).group() + key.split('/', 1)[-1]
     else:
-        key_URL = URL.rsplit("/",1)[0] + '/' + key
+        key_URL = URL.rsplit("/", 1)[0] + '/' + key
     try:
         res = requests.get(key_URL)
-        with open("./" + DIR + "/key.key", 'wb') as f:
-            f.write(res.content) 
+        with open(f"./{DIR}/ts/key.key", 'wb') as f:
+            f.write(res.content)
         res.close()
-    except:
-        print("如果你看见这个，证明 .key文件 没有下载成功，请手动下载并改名为 key.key")
-    new_result = LINE[0:re.search(str1, LINE).start()] + 'URI="key.key"' + LINE[re.search(str1, LINE).end():]
+    except Exception:
+        print("如果你看见这个，证明 .key文件 没有下载成功，并且这个视频属于加密的视频，请手动下载并改名，放在途径为 ./ts/key.key")
+    new_result = LINE[0:re.search(str1, LINE).start()] + 'URI="./ts/key.key"' + LINE[re.search(str1, LINE).end():]
     return new_result
 
 
 # 合并视频，需要ffmpeg
 def FFMPEG(DIR):
-    Input = "./" + DIR + "/new_" + DIR + ".m3u8"
-    Output = "./" + DIR + "/new_" + DIR + ".mp4"
-    CMD = "ffmpeg -allowed_extensions ALL -i " + Input + " -acodec copy -vcodec copy -f mp4 " + Output
+    Input = f"./{DIR}/new_{DIR}.m3u8"
+    Output = f"./{DIR}/{DIR}.mp4"
+    CMD = f"ffmpeg -allowed_extensions ALL -i {Input} -acodec copy -vcodec copy -f mp4 {Output}"
+    print(f"\n{'合并开始':=^20}")
     os.system(CMD)
+    print(f"\n{'合并完成':=^20}")
 
 
-def Start(URL, DIR, THREAD):
+def Main(URL, DIR, THREAD):
+    global sum_Front, sum_Next
     TS_LIST = Get(DIR, URL)
-    
     ID = 0
-    with ThreadPoolExecutor(THREAD) as threadpool:
-        for TS in TS_LIST:
-            threadpool.submit(Download, TS, DIR, "w_"+str(ID)+".ts")
-            ID += 1
-        threadpool.shutdown(wait=True)
-    FFMPEG(DIR)
-    print("合并完成")
+    trytimes = 0
+    for trytimes in range(0, 3):    # 3 次重试
+        with ThreadPoolExecutor(THREAD) as threadpool:
+            for TS in TS_LIST:
+                ID += 1
+                threadpool.submit(Download, TS, DIR, f"w_{ID}.ts")
+            threadpool.shutdown(wait=False)
+        if sum_Front == sum_Next:
+            FFMPEG(DIR)
+            shutil.rmtree(f"./{DIR}/ts")  # 合并成功后，删除 .ts 文件
+            os.remove(f"./{DIR}/new_{DIR}.m3u8")  # 合并成功后，删除 .m3u8 文件
+            break
+        print(f"\n第{trytimes}次重试中")
 
 
 if __name__ == "__main__":
@@ -112,6 +130,6 @@ if __name__ == "__main__":
     URL = input("输入URL：")
     # 保存m3u8的文件名夹  如：DIR = "index"
     DIR = input("输入文件夹名：")
-    # 线程数，网速跟不上再大也没用。不要盲目加大
+    # 线程数，你的网速、服务器的网速跟不上，再大也没用。不要盲目加大
     THR = 64
-    Start(URL, DIR, THR)
+    Main(URL, DIR, THR)
