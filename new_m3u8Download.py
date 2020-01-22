@@ -118,15 +118,16 @@ class M3u8Download:
     def download_key(self, key_line):
         mid_part = re.search(r"URI=[\'|\"].*?[\'|\"]", key_line).group()
         may_key_url = mid_part[5:-1]
-
+        print(f"MAY_KEY_URL = {may_key_url}")
         if re.search(r'^http', may_key_url) is not None:
-            real_key_url = may_key_url
+            true_key_url = may_key_url
         elif re.search(r'^/', may_key_url) is not None:
-            real_key_url = self.front_url + may_key_url
+            true_key_url = self.front_url + may_key_url
         else:
-            real_key_url = self.m3u8_url.rsplit("/", 1)[0] + '/' + may_key_url
+            true_key_url = self.m3u8_url.rsplit("/", 1)[0] + '/' + may_key_url
         try:
-            res = requests.get(real_key_url, timeout=(5, 60))
+            print(f"TRUE_KEY_URL = {true_key_url}")
+            res = requests.get(true_key_url, timeout=(5, 60))
             with open(f"./{self.save_dir}/ts/key.key", 'wb') as f:
                 f.write(res.content)
             res.close()
