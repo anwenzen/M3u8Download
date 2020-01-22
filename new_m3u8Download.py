@@ -26,11 +26,11 @@ class M3u8Download:
 
     def start(self):
         print(f"""{'任务开始':=^20}\nM3U8_URL = '{self.m3u8_url}'\nSAVE_DIR = '{os.getcwd()}'/'{self.save_dir}'""")
-        self.get_m3u8_info(self.m3u8_url)
         if not os.path.exists(f"./{self.save_dir}"):
             os.mkdir(f"./{self.save_dir}")
         if not os.path.exists(f"./{self.save_dir}/ts"):
             os.mkdir(f"./{self.save_dir}/ts")
+        self.get_m3u8_info(self.m3u8_url)
         for times in range(0, 5):  # 最多重试 5 次
             print(f"\n第 {times + 1} 次尝试中")
             self.success_sum = 0
