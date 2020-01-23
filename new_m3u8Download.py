@@ -14,7 +14,7 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
 
 
 class M3u8Download:
-    def __init__(self, m3u8_url, save_dir='new_video', max_workers=64):
+    def __init__(self, m3u8_url, save_dir='new_video', max_workers=64, ce_verify=True):
         self.m3u8_url = m3u8_url  # 完整的m3u8文件链接  如：M3U8_URL = "https://www.bilibili.com/example/index.m3u8"
         self.front_url = None
         self.save_dir = save_dir  # 保存m3u8的文件名夹  如：SAVE_DIR = "index"
@@ -22,10 +22,11 @@ class M3u8Download:
         self.ts_url_list = []
         self.success_sum = 0  # 记录下载成功的 .ts 文件个数
         self.ts_sum = 0  # 记录一个 .m3u8 文件含有 .ts 文件的总数
+        self.ce_verify = ce_verify  # ssl,ce证书验证开关,当为False时忽略安全性
         self.start()
 
     def start(self):
-        print(f"""{'任务开始':=^20}\nM3U8_URL = '{self.m3u8_url}'\nSAVE_DIR = '{os.getcwd()}'/'{self.save_dir}'""")
+        print(f"""{'任务开始':=^20}\nM3U8_URL = '{self.m3u8_url}'\nSAVE_DIR = '{os.getcwd()}/{self.save_dir}'""")
         if not os.path.exists(f"./{self.save_dir}"):
             os.mkdir(f"./{self.save_dir}")
         if not os.path.exists(f"./{self.save_dir}/ts"):
@@ -44,9 +45,9 @@ class M3u8Download:
 
     # 下载.m3u8   获取 .ts链接以及 .key链接
     def get_m3u8_info(self, m3u8_url):
-        res = requests.get(m3u8_url, timeout=(5, 60))
+        res = requests.get(m3u8_url, timeout=(5, 60), verify=self.ce_verify)
         self.front_url = res.request.url.split(res.request.path_url)[0]
-        if "EXT-X-STREAM-INF" in res.text:   # 判定为顶级M3U8文件
+        if "EXT-X-STREAM-INF" in res.text:  # 判定为顶级M3U8文件
             for line in res.text.split('\n'):
                 if "#" in line:
                     continue
@@ -96,7 +97,7 @@ class M3u8Download:
         try:
             if not os.path.exists(f"./{self.save_dir}/ts/{save_ts_name}"):
                 # ConnectTimeout= 5 s     ReadTimeout= 60 s
-                res = requests.get(ts_url, stream=True, timeout=(5, 60))
+                res = requests.get(ts_url, stream=True, timeout=(5, 60), verity=self.ce_verify)
                 if res.status_code == 200:
                     with open(f"./{self.save_dir}/ts/{save_ts_name}", "wb") as ts:
                         for chunk in res.iter_content(chunk_size=1024):
@@ -109,6 +110,7 @@ class M3u8Download:
                 res.close()
             else:
                 self.success_sum += 1
+
         except Exception:
             if os.path.exists(f"./{self.save_dir}/ts/{save_ts_name}"):
                 os.remove(f"./{self.save_dir}/ts/{save_ts_name}")
@@ -127,7 +129,7 @@ class M3u8Download:
             true_key_url = self.m3u8_url.rsplit("/", 1)[0] + '/' + may_key_url
         try:
             print(f"TRUE_KEY_URL = {true_key_url}")
-            res = requests.get(true_key_url, timeout=(5, 60))
+            res = requests.get(true_key_url, timeout=(5, 60), verity=self.ce_verify)
             with open(f"./{self.save_dir}/ts/key.key", 'wb') as f:
                 f.write(res.content)
             res.close()
@@ -154,10 +156,14 @@ if __name__ == "__main__":
     M3U8_URL = input("输入M3U8_URL：")
     SAVE_DIR = input("输入文件夹名：")
     MAX_WORKERS = 64  # 线程数，你的网速、服务器的网速跟不上，再大也没用。不要盲目加大
-    M3u8Download(M3U8_URL, SAVE_DIR, MAX_WORKERS)
+    CE_VERIFY = True  # ce证书验证开关,当为False时忽略安全性,出现CERTIFICATE_VERIFY_FAILED时按需改为False
+    M3u8Download(M3U8_URL, SAVE_DIR, MAX_WORKERS, CE_VERIFY)
 
-    # 多任务逐个下载
+    # 多任务同时个下载
     # M3U8_URL_LIST = ['url1', 'url2', 'url3', ...]
     # SAVE_DIR_LIST = ['dir1', 'dir2', 'dir3', ...]
-    # for M3U8_URL, SAVE_DIR in zip(M3U8_URL_LIST, SAVE_DIR_LIST):
-    #     M3u8Download(M3U8_URL, SAVE_DIR)
+    # MAX_WORKERS_A = 5  # 同时任务数
+    # MAX_WORKERS_B = 64  # 每个任务的线程数
+    # with ThreadPoolExecutorWithQueueSizeLimit(MAX_WORKERS_A) as pool:
+    #     for M3U8_URL, SAVE_DIR in zip(M3U8_URL_LIST, SAVE_DIR_LIST):
+    #         pool.submit(M3u8Download, M3U8_URL, SAVE_DIR, MAX_WORKERS_B)
