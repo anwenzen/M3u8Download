@@ -31,6 +31,8 @@ class M3u8Download:
             os.mkdir(f"./{self.save_dir}")
         if not os.path.exists(f"./{self.save_dir}/ts"):
             os.mkdir(f"./{self.save_dir}/ts")
+        if not self.ce_verify:
+            requests.packages.urllib3.disable_warnings()  # 关闭大量的ce证书不验证警告
         self.get_m3u8_info(self.m3u8_url)
         for times in range(0, 5):  # 最多重试 5 次
             print(f"\n第 {times + 1} 次尝试中")
@@ -97,7 +99,7 @@ class M3u8Download:
         try:
             if not os.path.exists(f"./{self.save_dir}/ts/{save_ts_name}"):
                 # ConnectTimeout= 5 s     ReadTimeout= 60 s
-                res = requests.get(ts_url, stream=True, timeout=(5, 60), verity=self.ce_verify)
+                res = requests.get(ts_url, stream=True, timeout=(5, 60), verify=self.ce_verify)
                 if res.status_code == 200:
                     with open(f"./{self.save_dir}/ts/{save_ts_name}", "wb") as ts:
                         for chunk in res.iter_content(chunk_size=1024):
@@ -110,7 +112,6 @@ class M3u8Download:
                 res.close()
             else:
                 self.success_sum += 1
-
         except Exception:
             if os.path.exists(f"./{self.save_dir}/ts/{save_ts_name}"):
                 os.remove(f"./{self.save_dir}/ts/{save_ts_name}")
@@ -129,7 +130,7 @@ class M3u8Download:
             true_key_url = self.m3u8_url.rsplit("/", 1)[0] + '/' + may_key_url
         try:
             print(f"TRUE_KEY_URL = {true_key_url}")
-            res = requests.get(true_key_url, timeout=(5, 60), verity=self.ce_verify)
+            res = requests.get(true_key_url, timeout=(5, 60), verify=self.ce_verify)
             with open(f"./{self.save_dir}/ts/key.key", 'wb') as f:
                 f.write(res.content)
             res.close()
