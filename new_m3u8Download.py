@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+# -*_ author: Vnzen -*-
 import os
 import re
 import queue
@@ -22,26 +23,31 @@ class M3u8Download:
         self.ts_url_list = []
         self.success_sum = 0  # 记录下载成功的 .ts 文件个数
         self.ts_sum = 0  # 记录一个 .m3u8 文件含有 .ts 文件的总数
+        self.fail_sum = 0
         self.ce_verify = ce_verify  # ssl,ce证书验证开关,当为False时忽略安全性
         self.start()
 
     def start(self):
-        print(f"""{'任务开始':=^20}\nM3U8_URL = '{self.m3u8_url}'\nSAVE_DIR = '{os.getcwd()}/{self.save_dir}'""")
+        print(f"""M3U8_URL = '{self.m3u8_url}'\nSAVE_DIR = '{os.getcwd()}/{self.save_dir}'""")
         if not os.path.exists(f"./{self.save_dir}"):
             os.mkdir(f"./{self.save_dir}")
         if not os.path.exists(f"./{self.save_dir}/ts"):
             os.mkdir(f"./{self.save_dir}/ts")
         if not self.ce_verify:
-            requests.packages.urllib3.disable_warnings()  # 关闭大量的ce证书不验证警告
-        self.get_m3u8_info(self.m3u8_url)
+            requests.packages.urllib3.disable_warnings()
+        try:
+            self.get_m3u8_info(self.m3u8_url)
+        except:
+            print(f"获取失败:{self.m3u8_url}")
+            return
         for times in range(0, 5):  # 最多重试 5 次
             print(f"\n第 {times + 1} 次尝试中")
             self.success_sum = 0
+            self.fail_sum = 0
             with ThreadPoolExecutorWithQueueSizeLimit(self.max_workers) as pool:
                 for ts_url, auto_id in zip(self.ts_url_list, range(0, len(self.ts_url_list))):
                     pool.submit(self.download_ts, ts_url, f"w_{auto_id + 1}.ts")
             if self.success_sum == self.ts_sum:
-                print(f"\n{'下载完成':=^20}")
                 self.merge_ts_file()
                 break
 
@@ -106,8 +112,9 @@ class M3u8Download:
                             if chunk:
                                 ts.write(chunk)
                     self.success_sum += 1
-                    print(f"\r下载进度：\t{self.success_sum}/{self.ts_sum}", end="")
+                    print(f"\r下载进度：{self.success_sum}/{self.ts_sum}", end="")
                 else:
+                    pass
                     print(f"\t下载./{self.save_dir}/ts/{save_ts_name}失败, [服务器响应码status_code!=200]")
                 res.close()
             else:
@@ -115,7 +122,9 @@ class M3u8Download:
         except Exception:
             if os.path.exists(f"./{self.save_dir}/ts/{save_ts_name}"):
                 os.remove(f"./{self.save_dir}/ts/{save_ts_name}")
-            print(f"\t下载./{self.save_dir}/ts/{save_ts_name}失败,连接或下载超时")
+#             print(f"\t下载./{self.save_dir}/ts/{save_ts_name}失败,连接或下载超时")
+            self.fail_sum += 1
+            print(f"\r下载进度:{self.success_sum}/{self.ts_sum}\t\t失败数:{self.fail_sum}", end="")
 
     # 下载 .key 文件
     def download_key(self, key_line):
@@ -144,27 +153,23 @@ class M3u8Download:
     # 合并.ts文件，输出mp4格式视频，需要ffmpeg
     def merge_ts_file(self):
         input_file = f"./{self.save_dir}/new_{self.save_dir}.m3u8"
-        output_file = f"./{self.save_dir}/{self.save_dir}.mp4"
+        output_file = f"./{self.save_dir}.mp4"
         cmd = f"ffmpeg -allowed_extensions ALL -i {input_file} -acodec copy -vcodec copy -f mp4 {output_file}"
-        print(f"\n{'合并开始':=^20}")
+        print(f"{'合并开始':=^20}")
         os.system(cmd)
-        shutil.rmtree(f"./{self.save_dir}/ts")  # 合并成功后，删除 .ts 文件
-        os.remove(f"./{self.save_dir}/new_{self.save_dir}.m3u8")  # 合并成功后，删除 .m3u8 文件
-        print(f"\n{'合并完成':=^20}")
+        shutil.rmtree(f"./{self.save_dir}")  # 合并成功后，删除 .ts 文件
+        print(f"{'合并完成':=^20}")
 
-
+        
 if __name__ == "__main__":
-    M3U8_URL = input("输入M3U8_URL：")
-    SAVE_DIR = input("输入文件夹名：")
-    MAX_WORKERS = 64  # 线程数，你的网速、服务器的网速跟不上，再大也没用。不要盲目加大
-    CE_VERIFY = True  # ce证书验证开关,当为False时忽略安全性,出现CERTIFICATE_VERIFY_FAILED时按需改为False
-    M3u8Download(M3U8_URL, SAVE_DIR, MAX_WORKERS, CE_VERIFY)
-
-    # 多任务同时个下载
-    # M3U8_URL_LIST = ['url1', 'url2', 'url3', ...]
-    # SAVE_DIR_LIST = ['dir1', 'dir2', 'dir3', ...]
-    # MAX_WORKERS_A = 5  # 同时任务数
-    # MAX_WORKERS_B = 64  # 每个任务的线程数
-    # with ThreadPoolExecutorWithQueueSizeLimit(MAX_WORKERS_A) as pool:
-    #     for M3U8_URL, SAVE_DIR in zip(M3U8_URL_LIST, SAVE_DIR_LIST):
-    #         pool.submit(M3u8Download, M3U8_URL, SAVE_DIR, MAX_WORKERS_B)
+    M3U8_URL_LIST = ['https://xxxxxxxxxxxx1.m3u8',
+                     'https://xxxxxxxxxxxx2.m3u8',
+                     'https://xxxxxxxxxxxx3.m3u8']
+    SAVE_NAME = 'save name'
+    START_NUMBER = 1
+    for M3U8_URL in M3U8_URL_LIST:
+        M3u8Download(M3U8_URL, 
+                     f"{SAVE_NAME}{START_NUMBER:02}" if len(M3U8_URL_LIST) != 1 else SAVE_NAME, 
+                     64, 
+                     False)
+        START_NUMBER += 1
