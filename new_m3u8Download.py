@@ -162,14 +162,14 @@ class M3u8Download:
 
         
 if __name__ == "__main__":
-    M3U8_URL_LIST = ['https://xxxxxxxxxxxx1.m3u8',
-                     'https://xxxxxxxxxxxx2.m3u8',
-                     'https://xxxxxxxxxxxx3.m3u8']
-    SAVE_NAME = 'save name'
+    M3U8_URL_LIST = [input("输入M3U8_URL，多个URL用空格分开：").split(" ")]
+    SAVE_NAME = [input("输入SAVE_NAME，多个URL用空格分开：").split(" ")]
+    # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
+    # 则只会使用第一个SAVE_NAME，并且会加尾数，方便(我自己)一次性下载一部电视剧
     START_NUMBER = 1
-    for M3U8_URL in M3U8_URL_LIST:
-        M3u8Download(M3U8_URL, 
-                     f"{SAVE_NAME}{START_NUMBER:02}" if len(M3U8_URL_LIST) != 1 else SAVE_NAME, 
+    for i in range(len(M3U8_URL_LIST)):
+        M3u8Download(M3U8_URL_LIST[i], 
+                     f"{SAVE_NAME[0]}{START_NUMBER:02}" if len(SAVE_NAME) != len[M3U8_URL_LIST] else SAVE_NAME[i], 
                      64, 
                      False)
         START_NUMBER += 1
