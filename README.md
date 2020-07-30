@@ -14,6 +14,6 @@
 ## 使用
 
 1. 输入 `完整的m3u8文件链接: url`、`保存m3u8的文件名: name`即可使用  
-[!img](img/one_test.png)  
-[!img](img/more_test.png)  
-[!img](img/done.png)  
+![img](img/one_test.png)  
+![img](img/more_test.png)  
+![img](img/done.png)  
