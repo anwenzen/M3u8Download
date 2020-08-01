@@ -4,7 +4,6 @@ import os
 import re
 import queue
 import requests
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 
