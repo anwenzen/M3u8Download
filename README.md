@@ -16,6 +16,6 @@
 ## 使用
 
 1. 输入 `完整的m3u8文件链接: url`、`保存m3u8的文件名: name`即可使用  
-![单视频下载](img/one_test.png)  
-![多视频下载](img/more_test.png)  
-![成功的样子](img/done.png)  
+![img](img/one_test.png)  
+![img](img/more_test.png)  
+![img](img/done.png)  
