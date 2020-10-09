@@ -59,7 +59,7 @@ class M3u8Download:
         获取m3u8信息
         """
         try:
-            res = requests.get(m3u8_url, timeout=(5, 60), verify=False, headers=self.headers)
+            res = requests.get(m3u8_url, timeout=(3, 30), verify=False, headers=self.headers)
             self.front_url = res.url.split(res.request.path_url)[0]
             if "EXT-X-STREAM-INF" in res.text:  # 判定为顶级M3U8文件
                 for line in res.text.split('\n'):
@@ -90,11 +90,11 @@ class M3u8Download:
         ts = make_sum()
         for line in m3u8_text_str.split('\n'):
             if "#" in line:
-                if "EXT-X-KEY" in line:
-                    key = self.download_key(line)
+                if "EXT-X-KEY" in line and "URI=" in line:
+                    key = self.download_key(line, 5)
                     if key:
                         new_m3u8_str += f'{key}\n'
-                    continue
+                        continue
                 new_m3u8_str += f'{line}\n'
                 if "EXT-X-ENDLIST" in line:
                     break
