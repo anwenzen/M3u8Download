@@ -69,9 +69,9 @@ class M3u8Download:
                 for line in res.text.split('\n'):
                     if "#" in line:
                         continue
-                    elif re.search(r'^http', line) is not None:
+                    elif line.startswith('http'):
                         self._url = line
-                    elif re.search(r'^/', line) is not None:
+                    elif line.startswith('/'):
                         self._url = self._front_url + line
                     else:
                         self._url = self._url.rsplit("/", 1)[0] + '/' + line
@@ -102,10 +102,14 @@ class M3u8Download:
                 new_m3u8_str += f'{line}\n'
                 if "EXT-X-ENDLIST" in line:
                     break
-            elif re.search(r'^http', line) is not None:
+            # elif re.search(r'^http', line) is not None:
+            #     pass
+            elif line.startswith('http'):
                 new_m3u8_str += f"./{self._name}/{next(ts)}\n"
                 self._ts_url_list.append(line)
-            elif re.search(r'^/', line) is not None:
+            # elif re.search(r'^/', line) is not None:
+            #     pass
+            elif line.startswith('/'):
                 new_m3u8_str += f"./{self._name}/{next(ts)}\n"
                 self._ts_url_list.append(self._front_url + line)
             else:
@@ -149,9 +153,9 @@ class M3u8Download:
         """
         mid_part = re.search(r"URI=[\'|\"].*?[\'|\"]", key_line).group()
         may_key_url = mid_part[5:-1]
-        if re.search(r'^http', may_key_url) is not None:
+        if may_key_url.startswith('http'):
             true_key_url = may_key_url
-        elif re.search(r'^/', may_key_url) is not None:
+        elif may_key_url.startswith('/'):
             true_key_url = self._front_url + may_key_url
         else:
             true_key_url = self._url.rsplit("/", 1)[0] + '/' + may_key_url
@@ -173,7 +177,8 @@ class M3u8Download:
         """
         合并.ts文件，输出mp4格式视频，需要ffmpeg
         """
-        cmd = f"ffmpeg -allowed_extensions ALL -i {self._name}.m3u8 -acodec copy -vcodec copy -f mp4 {self._name}.mp4"
+        cmd = f"ffmpeg -allowed_extensions ALL -i {self._name}.m3u8 -acodec \
+        copy -vcodec copy -f mp4 {self._name}.mp4"
         os.system(cmd)
         file = os.listdir(self._file_path)
         for item in file:
@@ -188,9 +193,10 @@ if __name__ == "__main__":
     name_list = input("输入name，若同时输入多个name要用空格分开：").split()
     # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
     # 下载一部电视剧时，只需要输入一个name就可以了
+    sta = len(url_list) == len(name_list)
     for i, u in enumerate(url_list):
         M3u8Download(u,
-                     name_list[i] if len(url_list) == len(name_list) else f"{name_list[0]}{i + 1:02}",
+                     name_list[i] if sta else f"{name_list[0]}{i + 1:02}",
                      max_workers=64,
                      num_retries=10
                      )
