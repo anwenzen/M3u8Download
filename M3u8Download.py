@@ -177,8 +177,8 @@ class M3u8Download:
         """
         合并.ts文件，输出mp4格式视频，需要ffmpeg
         """
-        cmd = f"ffmpeg -allowed_extensions ALL -i {self._name}.m3u8 -acodec \
-        copy -vcodec copy -f mp4 {self._name}.mp4"
+        cmd = f"ffmpeg -allowed_extensions ALL -i {self._file_path}.m3u8 -acodec \
+        copy -vcodec copy -f mp4 {self._file_path}.mp4"
         os.system(cmd)
         file = os.listdir(self._file_path)
         for item in file:
