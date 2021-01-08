@@ -63,22 +63,22 @@ class M3u8Download:
         获取m3u8信息
         """
         try:
-            res = requests.get(m3u8_url, timeout=(3, 30), verify=False, headers=self._headers)
-            self._front_url = res.url.split(res.request.path_url)[0]
-            if "EXT-X-STREAM-INF" in res.text:  # 判定为顶级M3U8文件
-                for line in res.text.split('\n'):
-                    if "#" in line:
-                        continue
-                    elif line.startswith('http'):
-                        self._url = line
-                    elif line.startswith('/'):
-                        self._url = self._front_url + line
-                    else:
-                        self._url = self._url.rsplit("/", 1)[0] + '/' + line
-                self.get_m3u8_info(self._url, self._num_retries)
-            else:
-                m3u8_text_str = res.text
-                self.get_ts_url(m3u8_text_str)
+            with requests.get(m3u8_url, timeout=(3, 30), verify=False, headers=self._headers) as res:
+                self._front_url = res.url.split(res.request.path_url)[0]
+                if "EXT-X-STREAM-INF" in res.text:  # 判定为顶级M3U8文件
+                    for line in res.text.split('\n'):
+                        if "#" in line:
+                            continue
+                        elif line.startswith('http'):
+                            self._url = line
+                        elif line.startswith('/'):
+                            self._url = self._front_url + line
+                        else:
+                            self._url = self._url.rsplit("/", 1)[0] + '/' + line
+                    self.get_m3u8_info(self._url, self._num_retries)
+                else:
+                    m3u8_text_str = res.text
+                    self.get_ts_url(m3u8_text_str)
         except Exception as e:
             print(e)
             if num_retries > 0:
@@ -122,19 +122,18 @@ class M3u8Download:
         ts_url = ts_url.split('\n')[0]
         try:
             if not os.path.exists(name):
-                res = requests.get(ts_url, stream=True, timeout=(5, 60), verify=False, headers=self._headers)
-                if res.status_code == 200:
-                    with open(name, "wb") as ts:
-                        for chunk in res.iter_content(chunk_size=1024):
-                            if chunk:
-                                ts.write(chunk)
-                    self._success_sum += 1
-                    sys.stdout.write('\r[%-25s](%d/%d)' % ("*" * (100 * self._success_sum // self._ts_sum // 4),
-                                                           self._success_sum, self._ts_sum))
-                    sys.stdout.flush()
-                else:
-                    self.download_ts(ts_url, name, num_retries - 1)
-                res.close()
+                with requests.get(ts_url, stream=True, timeout=(5, 60), verify=False, headers=self._headers) as res:
+                    if res.status_code == 200:
+                        with open(name, "wb") as ts:
+                            for chunk in res.iter_content(chunk_size=1024):
+                                if chunk:
+                                    ts.write(chunk)
+                        self._success_sum += 1
+                        sys.stdout.write('\r[%-25s](%d/%d)' % ("*" * (100 * self._success_sum // self._ts_sum // 4),
+                                                               self._success_sum, self._ts_sum))
+                        sys.stdout.flush()
+                    else:
+                        self.download_ts(ts_url, name, num_retries - 1)
             else:
                 self._success_sum += 1
         except Exception:
@@ -156,10 +155,9 @@ class M3u8Download:
         else:
             true_key_url = self._url.rsplit("/", 1)[0] + '/' + may_key_url
         try:
-            res = requests.get(true_key_url, timeout=(5, 60), verify=False, headers=self._headers)
-            with open(os.path.join(self._file_path, 'key'), 'wb') as f:
-                f.write(res.content)
-            res.close()
+            with requests.get(true_key_url, timeout=(5, 60), verify=False, headers=self._headers) as res:
+                with open(os.path.join(self._file_path, 'key'), 'wb') as f:
+                    f.write(res.content)
             return f'{key_line.split(mid_part)[0]}URI="./{self._name}/key"{key_line.split(mid_part)[-1]}'
         except Exception as e:
             print(e)
