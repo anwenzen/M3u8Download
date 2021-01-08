@@ -102,13 +102,9 @@ class M3u8Download:
                 new_m3u8_str += f'{line}\n'
                 if "EXT-X-ENDLIST" in line:
                     break
-            # elif re.search(r'^http', line) is not None:
-            #     pass
             elif line.startswith('http'):
                 new_m3u8_str += f"./{self._name}/{next(ts)}\n"
                 self._ts_url_list.append(line)
-            # elif re.search(r'^/', line) is not None:
-            #     pass
             elif line.startswith('/'):
                 new_m3u8_str += f"./{self._name}/{next(ts)}\n"
                 self._ts_url_list.append(self._front_url + line)
