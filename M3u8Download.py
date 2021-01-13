@@ -6,6 +6,7 @@ import re
 import sys
 import queue
 import base64
+import platform
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
@@ -115,8 +116,11 @@ class M3u8Download:
                 new_m3u8_str += f"./{self._name}/{next(ts)}\n"
                 self._ts_url_list.append(self._url.rsplit("/", 1)[0] + '/' + line)
         self._ts_sum = next(ts)
-        with open(self._file_path + '.m3u8', "w") as f:
-            f.write(new_m3u8_str)
+        with open(self._file_path + '.m3u8', "wb") as f:
+            if platform.system() == 'Windows':
+                f.write(new_m3u8_str.replace('/', '\\').encode('gbk'))
+            else:
+                f.write(new_m3u8_str.encode('utf-8'))
 
     def download_ts(self, ts_url, name, num_retries):
         """
@@ -162,7 +166,7 @@ class M3u8Download:
         else:
             true_key_url = self._url.rsplit("/", 1)[0] + '/' + may_key_url
         try:
-            with requests.get(true_key_url, timeout=(5, 60), verify=False, headers=self._headers) as res:
+            with requests.get(true_key_url, timeout=(5, 30), verify=False, headers=self._headers) as res:
                 with open(os.path.join(self._file_path, 'key'), 'wb') as f:
                     f.write(res.content)
             return f'{key_line.split(mid_part)[0]}URI="./{self._name}/key"{key_line.split(mid_part)[-1]}'
@@ -181,11 +185,11 @@ class M3u8Download:
         cmd = f"ffmpeg -allowed_extensions ALL -i {self._file_path}.m3u8 -acodec \
         copy -vcodec copy -f mp4 {self._file_path}.mp4"
         os.system(cmd)
-        file = os.listdir(self._file_path)
-        for item in file:
-            os.remove(os.path.join(self._file_path, item))
-        os.removedirs(self._file_path)
-        os.remove(self._file_path + '.m3u8')
+        # file = os.listdir(self._file_path)
+        # for item in file:
+        #     os.remove(os.path.join(self._file_path, item))
+        # os.removedirs(self._file_path)
+        # os.remove(self._file_path + '.m3u8')
         print(f"Download successfully --> {self._name}")
 
 
@@ -200,5 +204,5 @@ if __name__ == "__main__":
                      name_list[i] if sta else f"{name_list[0]}{i + 1:02}",
                      max_workers=64,
                      num_retries=10,
-                     # base64_key=None
+                     base64_key='5N12sDHDVcx1Hqnagn4NJg=='
                      )
