@@ -198,5 +198,6 @@ if __name__ == "__main__":
         M3u8Download(u,
                      name_list[i] if sta else f"{name_list[0]}{i + 1:02}",
                      max_workers=64,
-                     num_retries=10
+                     num_retries=10,
+                     # base64_key=None
                      )
