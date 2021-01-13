@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import queue
+import base64
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
@@ -35,7 +36,7 @@ class M3u8Download:
     :param num_retries: 重试次数
     """
 
-    def __init__(self, url, name, max_workers=64, num_retries=5):
+    def __init__(self, url, name, max_workers=64, num_retries=5, base64_key=None):
         self._url = url
         self._name = name
         self._max_workers = max_workers
@@ -45,6 +46,7 @@ class M3u8Download:
         self._ts_url_list = []
         self._success_sum = 0
         self._ts_sum = 0
+        self._key = base64.b64decode(base64_key.encode()) if base64_key else None
         self._headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) \
         AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36'}
 
@@ -148,6 +150,10 @@ class M3u8Download:
         """
         mid_part = re.search(r"URI=[\'|\"].*?[\'|\"]", key_line).group()
         may_key_url = mid_part[5:-1]
+        if self._key:
+            with open(os.path.join(self._file_path, 'key'), 'wb') as f:
+                f.write(self._key)
+            return f'{key_line.split(mid_part)[0]}URI="./{self._name}/key"'
         if may_key_url.startswith('http'):
             true_key_url = may_key_url
         elif may_key_url.startswith('/'):
