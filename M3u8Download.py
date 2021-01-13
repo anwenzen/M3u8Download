@@ -34,6 +34,7 @@ class M3u8Download:
     :param name: 保存m3u8的文件名 如"index"
     :param max_workers: 多线程最大线程数
     :param num_retries: 重试次数
+    :param base64_key: base64编码的字符串
     """
 
     def __init__(self, url, name, max_workers=64, num_retries=5, base64_key=None):
