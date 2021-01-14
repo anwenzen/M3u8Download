@@ -25,7 +25,7 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
 def make_sum():
     ts_num = 0
     while True:
-        yield ts_num
+        yield str(ts_num)
         ts_num += 1
 
 
@@ -61,6 +61,8 @@ class M3u8Download:
                 pool.submit(self.download_ts, ts_url, os.path.join(self._file_path, str(k)), self._num_retries)
         if self._success_sum == self._ts_sum:
             self.output_mp4()
+            self.delete_file()
+            print(f"Download successfully --> {self._name}")
 
     def get_m3u8_info(self, m3u8_url, num_retries):
         """
@@ -99,6 +101,8 @@ class M3u8Download:
         for line in m3u8_text_str.split('\n'):
             if "#" in line:
                 if "EXT-X-KEY" in line and "URI=" in line:
+                    if os.path.exists(os.path.join(self._file_path, 'key')):
+                        continue
                     key = self.download_key(line, 5)
                     if key:
                         new_m3u8_str += f'{key}\n'
@@ -106,19 +110,21 @@ class M3u8Download:
                 new_m3u8_str += f'{line}\n'
                 if "EXT-X-ENDLIST" in line:
                     break
-            elif line.startswith('http'):
-                new_m3u8_str += f"./{self._name}/{next(ts)}\n"
-                self._ts_url_list.append(line)
-            elif line.startswith('/'):
-                new_m3u8_str += f"./{self._name}/{next(ts)}\n"
-                self._ts_url_list.append(self._front_url + line)
             else:
-                new_m3u8_str += f"./{self._name}/{next(ts)}\n"
-                self._ts_url_list.append(self._url.rsplit("/", 1)[0] + '/' + line)
+                if line.startswith('http'):
+                    self._ts_url_list.append(line)
+                elif line.startswith('/'):
+                    self._ts_url_list.append(self._front_url + line)
+                else:
+                    self._ts_url_list.append(self._url.rsplit("/", 1)[0] + '/' + line)
+                if platform.system() == 'Windows':
+                    new_m3u8_str += (os.path.join(self._file_path, next(ts)) + '\n')
+                else:
+                    new_m3u8_str += f"./{self._name}/{next(ts)}\n"
         self._ts_sum = next(ts)
         with open(self._file_path + '.m3u8', "wb") as f:
             if platform.system() == 'Windows':
-                f.write(new_m3u8_str.replace('/', '\\').encode('gbk'))
+                f.write(new_m3u8_str.encode('gbk'))
             else:
                 f.write(new_m3u8_str.encode('utf-8'))
 
@@ -185,12 +191,13 @@ class M3u8Download:
         cmd = f"ffmpeg -allowed_extensions ALL -i {self._file_path}.m3u8 -acodec \
         copy -vcodec copy -f mp4 {self._file_path}.mp4"
         os.system(cmd)
-        # file = os.listdir(self._file_path)
-        # for item in file:
-        #     os.remove(os.path.join(self._file_path, item))
-        # os.removedirs(self._file_path)
-        # os.remove(self._file_path + '.m3u8')
-        print(f"Download successfully --> {self._name}")
+
+    def delete_file(self):
+        file = os.listdir(self._file_path)
+        for item in file:
+            os.remove(os.path.join(self._file_path, item))
+        os.removedirs(self._file_path)
+        os.remove(self._file_path + '.m3u8')
 
 
 if __name__ == "__main__":
