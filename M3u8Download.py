@@ -25,7 +25,7 @@ class ThreadPoolExecutorWithQueueSizeLimit(ThreadPoolExecutor):
 def make_sum():
     ts_num = 0
     while True:
-        yield str(ts_num)
+        yield ts_num
         ts_num += 1
 
 
@@ -55,7 +55,7 @@ class M3u8Download:
         requests.packages.urllib3.disable_warnings()
 
         self.get_m3u8_info(self._url, self._num_retries)
-        print('Downloading', self._name)
+        print('Downloading: %s' % self._name, 'Save path: %s' % self._file_path, sep='\n')
         with ThreadPoolExecutorWithQueueSizeLimit(self._max_workers) as pool:
             for k, ts_url in enumerate(self._ts_url_list):
                 pool.submit(self.download_ts, ts_url, os.path.join(self._file_path, str(k)), self._num_retries)
@@ -117,10 +117,7 @@ class M3u8Download:
                     self._ts_url_list.append(self._front_url + line)
                 else:
                     self._ts_url_list.append(self._url.rsplit("/", 1)[0] + '/' + line)
-                if platform.system() == 'Windows':
-                    new_m3u8_str += (os.path.join(self._file_path, next(ts)) + '\n')
-                else:
-                    new_m3u8_str += f"./{self._name}/{next(ts)}\n"
+                new_m3u8_str += (os.path.join(self._file_path, str(next(ts))) + '\n')
         self._ts_sum = next(ts)
         with open(self._file_path + '.m3u8', "wb") as f:
             if platform.system() == 'Windows':
