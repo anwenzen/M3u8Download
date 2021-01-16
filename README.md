@@ -11,16 +11,29 @@
 
 ## 依赖
 
-1. `python3.6+`  
-2. `requests`库,使用`pip install requests`安装  
-3. [ffmpeg](http://www.ffmpeg.org)，对于Windows用户，需要将ffmpeg添加进环境变量中,直到你可以在CMD中使用ffmpeg命令   
+1. `python3.6+` ![img](img/1610781483234.jpg) 
+2. `requests`库,使用`pip install requests`安装![img](img/1610781483232.jpg)  
+3. [ffmpeg](http://www.ffmpeg.org)![img](img/1610781483229.jpg)
+   对于Windows用户，需要将ffmpeg添加进环境变量中,直到你可以在CMD中使用ffmpeg命令   
     termux: `pkg install ffmpeg`  
     centos: `yum install ffmpeg`  
     mac os: `brew install ffmpeg`  
+   
 
 ## 使用
 
-1. 输入 `完整的m3u8文件链接: url`、`保存m3u8的文件名: name`即可使用  
-![img](img/one_test.png)  
-![img](img/more_test.png)  
-![img](img/done.png)  
+1. 命令行敲入`python M3u8Download.py`
+2. 输入 `url` `name` 即可使用  
+   `完整的m3u8文件链接: url`  
+   `保存m3u8的文件名: name`
+   
+
+## 演示
+
+![img](img/1610781483225.jpg)
+![img](img/1610781483227.jpg)
+
+
+## 参数说明
+
+![img](img/1610781483220.jpg)
