@@ -8,6 +8,7 @@ import queue
 import base64
 import platform
 import requests
+import urllib3
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -52,7 +53,7 @@ class M3u8Download:
         self._headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) \
         AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36'}
 
-        requests.packages.urllib3.disable_warnings()
+        urllib3.disable_warnings()
 
         self.get_m3u8_info(self._url, self._num_retries)
         print('Downloading: %s' % self._name, 'Save path: %s' % self._file_path, sep='\n')
@@ -185,8 +186,8 @@ class M3u8Download:
         """
         合并.ts文件，输出mp4格式视频，需要ffmpeg
         """
-        cmd = f"ffmpeg -allowed_extensions ALL -i {self._file_path}.m3u8 -acodec \
-        copy -vcodec copy -f mp4 {self._file_path}.mp4"
+        cmd = f"ffmpeg -allowed_extensions ALL -i '{self._file_path}.m3u8' -acodec \
+        copy -vcodec copy -f mp4 '{self._file_path}.mp4'"
         os.system(cmd)
 
     def delete_file(self):
