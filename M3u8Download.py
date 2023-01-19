@@ -9,6 +9,8 @@ import base64
 import platform
 import requests
 import urllib3
+import subprocess
+import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -181,14 +183,27 @@ class M3u8Download:
             print("加密视频,无法加载key,揭秘失败")
             if num_retries > 0:
                 self.download_key(key_line, num_retries - 1)
+                
+    '''
+    run cmd
+    '''
+    def shell_run_cmd_block(self, cmd):
+        p = subprocess.Popen(cmd,
+                         shell=True,
+                         stdout=sys.stdout,
+                         stderr=sys.stderr,
+                         )
+        p.wait()
+        print('cmd ret=%d' % p.returncode)
 
     def output_mp4(self):
         """
         合并.ts文件，输出mp4格式视频，需要ffmpeg
         """
-        cmd = f"ffmpeg -allowed_extensions ALL -i '{self._file_path}.m3u8' -acodec \
-        copy -vcodec copy -f mp4 '{self._file_path}.mp4'"
-        os.system(cmd)
+        cmd = 'ffmpeg -allowed_extensions ALL -i "%s.m3u8" -acodec copy -vcodec copy -f mp4 "E:\\xvideos\\%s.mp4"' % (self._file_path, self._name)
+        # os.system(cmd)
+        print(cmd)
+        self.shell_run_cmd_block(cmd)
 
     def delete_file(self):
         file = os.listdir(self._file_path)
@@ -196,13 +211,9 @@ class M3u8Download:
             os.remove(os.path.join(self._file_path, item))
         os.removedirs(self._file_path)
         os.remove(self._file_path + '.m3u8')
-
-
-if __name__ == "__main__":
-    url_list = input("输入url，若同时输入多个url时要用空格分开：").split()
-    name_list = input("输入name，若同时输入多个name要用空格分开：").split()
-    # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
-    # 下载一部电视剧时，只需要输入一个name就可以了
+        
+        
+def proc(url_list, name_list):
     sta = len(url_list) == len(name_list)
     for i, u in enumerate(url_list):
         M3u8Download(u,
@@ -211,3 +222,19 @@ if __name__ == "__main__":
                      num_retries=10,
                      # base64_key='5N12sDHDVcx1Hqnagn4NJg=='
                      )
+    exit()
+
+if __name__ == "__main__":
+    while True:
+        url_list = input("输入url，若同时输入多个url时要用,分开：").split()
+        name_list = []
+        for url in url_list:
+            name = os.path.basename(url)
+            file,ext = os.path.splitext(name)
+            name_list.append(file)
+        # 如果M3U8_URL的数量 ≠ SAVE_NAME的数量
+        # 下载一部电视剧时，只需要输入一个name就可以了
+        p = multiprocessing.Process(target=proc, args=(url_list, name_list))
+        p.start()
+        
+    
